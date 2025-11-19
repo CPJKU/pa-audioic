@@ -1,0 +1,40 @@
+[project]
+name = "pa_audioic"
+version = "0.1.0"
+description = "PAAudioIC Project"
+readme = "README.md"
+authors = [{name = "Mathias Rose Bjare", email = "muthissar@gmail.com"}]
+license = "CC-BY-NC-4.0"
+requires-python = ">=3.11,<3.13"
+
+dependencies = [
+    "music2latent @ git+https://github.com/CPJKU/pa-music2latent",
+    "numpy>=1.23.4,<2.0.0",
+    "soundfile>=0.12.1",
+    "torch>=2.3.0,<2.6.0",
+    "torchaudio>=2.3.0,<2.6.0",
+    "librosa>=0.10.2.post1",
+    "x-transformers==1.42",
+    "einops>=0.8.0",
+    "jsonargparse[signatures]>=4.32.0,<5.0.0"
+]
+
+[project.urls]
+homepage = "https://github.com/CPJKU/pa-audioic"
+issues = "https://github.com/CPJKU/pa-audioic/issues"
+
+[project.optional-dependencies]
+demo = [
+    "ipykernel",
+    "matplotlib"
+]
+
+[build-system]
+requires = ["setuptools >= 77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
