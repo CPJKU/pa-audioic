@@ -9,7 +9,7 @@ You can install the package using pip with or without the extra dependencies req
 
 ### Install the package for general use:
 ```bash
-pip install pa_audioic
+pip install git+https://github.com/CPJKU/pa-audioic
 ```
 
 ### Install the package with demo dependencies:
@@ -46,7 +46,7 @@ CUDA_VISIBLE_DEVICES=DEVICE_ID python -m pa_audioic.audioic --output_dir OUTPUT_
 Replace `DEVICE_ID` by a cuda device id.
 #### Advanced Usage
 To list the full program arguments, run:
-```bash
+```
 python -m pa_audioic.audioic --help
 
 usage: audioic.py [-h] [--config CONFIG] [--print_config[=flags]] [--noise_levels NOISE_LEVELS] [--audio_type AUDIO_TYPE] [--output_dir OUTPUT_DIR] [--device DEVICE] [--monte_carlo_samples MONTE_CARLO_SAMPLES]
