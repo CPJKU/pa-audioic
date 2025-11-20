@@ -100,17 +100,17 @@ By passing `--noise_from_expection true`, noise is added according to the forwar
 
 By passing `--noise_from_expection false`, obtain *"noised"* samples as intermediate solutions of the [probability flow ODE](https://arxiv.org/pdf/2011.13456). 
 
-##### Integration related arguments
+##### Integration-related arguments
 Calculating IC with diffusion models corresponds to solving an ODE by numerical integration. As such, this involves trading off speed for accuracy.
 
 Setting `--integration_params.n_runs N_RUNS` determines the number of Monte Carlo samples used for the [Skilling-Hutchingson divergence estimator](https://arxiv.org/pdf/1810.01367) in the [instantaneous change of variables formula](https://proceedings.neurips.cc/paper_files/paper/2018/file/69386f6bb1dfed68692a24c8686939b9-Paper.pdf). Setting this value low (e.g., setting it to `1`, which is feasible in some cases) speeds up performance.
 
 
-Setting `--integration_params.solver euler` and `--integration_params.solver_kwargs "{'n_steps': 100}"`  uses a simple Euler solver with 100 steps (`n_steps` speeds up the estimation).
+Setting `--integration_params.solver euler` and `--integration_params.solver_kwargs "{'n_steps': 100}"`  uses a simple Euler solver with 100 steps (setting `n_steps` lower speeds up the estimation).
 
 Setting `--integration_params.solver scipy` uses [`scipy.integrate.solve_ivp`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html) as an integration backend. Additional arguments to `solve_ivp` (see documentation), can be passed using `--integration_params.solver_kwargs`.
 
-##### Memory related arguments
+##### Memory-related arguments
 `--vmap_chunk_size VMAP_CHUNK_SIZE` determines the chunk size used when calculating IC for multiple time-steps in parallel. Set lower if you run into out-of-memory issues
 
 `--bz BZ` Batch size for processing audio files. Setting this >1 can speed up computation if audio files are short and approximately uniform in length.
