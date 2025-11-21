@@ -20,31 +20,57 @@ pip install ".[demo]"
 ```
 
 ## Usage
+### Using the AudioIC programmatically
+The [`demo.ipynb`](./demo.ipynb) notebook demonstrates how to use the library programmatically to calculate and visualize the IC of audio files.
 
 ### Running the `audioic` Command-Line Tool
-#### Basic Usage
+#### Basic usage
 The [`audioic`](./pa_audioic/audioic.py) command-line tool allows you to compute the *information content* (IC) of audio files.
 To use it, specify the audio files you want to process and provide an output directory where the results will be saved as CSV files:
 
 ```bash
-python -m pa_audioic.audioic --output_dir OUTPUT_DIR --device "cpu" "['AUDIO_FILE_1', 'AUDIO_FILE_2', ...]"
+python -m pa_audioic.audioic --output_dir OUTPUT_DIR --device "cpu" "['AUDIO_FILE_1','AUDIO_FILE_2',...]"
 ```
 
 Replace `AUDIO_FILE_1`, `AUDIO_FILE_2`, etc., with the paths to your audio files, and `OUTPUT_DIR` with the directory where you want the output files to be stored.
 
 To get hierarchical perceptual IC estimates, run:
 ```bash
-python -m pa_audioic.audioic --output_dir OUTPUT_DIR --noise_levels "[NOISE_LEVEL_1,NOISE_LEVEL_2,...]" --device "cpu" "['AUDIO_FILE_1', 'AUDIO_FILE_2', ...]"
+python -m pa_audioic.audioic --output_dir OUTPUT_DIR --noise_levels "[NOISE_LEVEL_1,NOISE_LEVEL_2,...]" --device "cpu" "['AUDIO_FILE_1','AUDIO_FILE_2',...]"
 ```
 Replace `NOISE_LEVEL_1`, `NOISE_LEVEL_2`, etc., with float numbers in `[0.0, 1.0]`, where, `0.0` corresponds to estimating IC of all information in the audio signal, `1.0` corresponds to using none of the audio signal information and intermediate values (e.g `0.6`) corresponds to removing parts of the information found to be less perceptually relevant (see paper for more details).  
 
 To run the tool on a GPU (default), specify the `--device` argument as `"cuda"`:
 
 ```bash
-CUDA_VISIBLE_DEVICES=DEVICE_ID python -m pa_audioic.audioic --output_dir OUTPUT_DIR --device "cuda" "['AUDIO_FILE_1', 'AUDIO_FILE_2', ...]"
+CUDA_VISIBLE_DEVICES=DEVICE_ID python -m pa_audioic.audioic --output_dir OUTPUT_DIR --device "cuda" "['AUDIO_FILE_1','AUDIO_FILE_2',...]"
 ```
-Replace `DEVICE_ID` by a cuda device id.
-#### Advanced Usage
+Replace `DEVICE_ID` with a cuda device id.
+
+#### CSV output format
+Running `audioic` with parameters
+```bash
+python -m pa_audioic.audioic --noise_levels "[0.0,0.3,0.5]"  "['AUDIO_FILE_1']"
+```
+will result in a an audio file following the following format.
+```csv
+Time,IC_0.0,IC_0.3,IC_0.5
+0.09287981859410431,nan,nan,nan
+0.18575963718820862,nan,nan,nan
+0.2786394557823129,nan,nan,nan
+0.37151927437641724,55.07291,38.968643,39.15696
+0.46439909297052157,74.925934,55.580364,48.62501
+...
+7.987664399092971,45.44641,43.173058,35.923733
+8.080544217687075,39.387936,28.39015,33.411766
+8.17342403628118,36.639862,28.572035,32.627956
+8.266303854875284,nan,nan,nan
+8.359183673469389,nan,nan,nan
+```
+**Time** — Reports the time in seconds (reported as the timestamp of the last sample decoded from the predicted music2latent frame).
+**IC_NOISE_LEVEL** — IC reported at NOISE_LEVEL. `nan` is reported where the model detects heading or trailing silence in the audio file.
+
+#### Advanced usage
 To list the full program arguments, run:
 ```
 python -m pa_audioic.audioic --help
@@ -93,7 +119,7 @@ Integration and solver parameters for likelihood evaluation:
 ```
 The CLI application is built with [jsonargparse](https://jsonargparse.readthedocs.io/en/v4.43.0) and supports setting all arguments either via configuration files or by parsing them as `JSON` strings, as described in the documentation.
 
-##### Noising related arguments
+##### Noising-related arguments
 As described in the paper, IC can be estimated in a way that filters less perceptual information by adding noise of varying strengths to the data.
 
 By passing `--noise_from_expection true`, noise is added according to the forward noise process: if `--monte_carlo_samples null`, use the expectation of the noise process; otherwise, if `--monte_carlo_samples MONTE_CARLO_SAMPLES` and `MONTE_CARLO_SAMPLES` is an integer, estimate the noise process expectation using `MONTE_CARLO_SAMPLES` samples.
@@ -114,10 +140,6 @@ Setting `--integration_params.solver scipy` uses [`scipy.integrate.solve_ivp`](h
 `--vmap_chunk_size VMAP_CHUNK_SIZE` determines the chunk size used when calculating IC for multiple time-steps in parallel. Set lower if you run into out-of-memory issues
 
 `--bz BZ` Batch size for processing audio files. Setting this >1 can speed up computation if audio files are short and approximately uniform in length.
-
-
-### Using the AudioIC programmatically
-The [`demo.ipynb`](./demo.ipynb) notebook demonstrates how to use the library programmatically to calculate and visualize the IC of audio files.
 
 ## Citation
 If you use this project in your research, please cite the following paper:
