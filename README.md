@@ -20,7 +20,7 @@ pip install ".[demo]"
 ```
 
 ## Usage
-### Using the AudioIC programmatically
+### Using PAAudioIC programmatically
 The [`demo.ipynb`](./demo.ipynb) notebook demonstrates how to use the library programmatically to calculate and visualize the IC of audio files.
 
 ### Running the `audioic` Command-Line Tool
