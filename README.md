@@ -7,12 +7,12 @@ PAAudioIC includes a command-line tool and Python classes for calculating IC usi
 ## Installation
 You can install the package using pip with or without the extra dependencies required for the demo.
 
-### Install the package for general use:
+### Install the package for general use
 ```bash
 pip install git+https://github.com/CPJKU/pa-audioic
 ```
 
-### Install the package with demo dependencies:
+### Install the package with demo dependencies
 ```bash
 git clone https://github.com/CPJKU/pa_audioic.git
 cd pa-audioic
