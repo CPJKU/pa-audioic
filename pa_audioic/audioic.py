@@ -230,6 +230,58 @@ class ICCalcHelper:
             )
         return ret
 
+    @torch.no_grad
+    def entr(
+        self,
+        heading_nan_pads: List[int],
+        trailing_nan_pads: List[int],
+        latents: List[torch.Tensor],
+        noise_levels: List[float] = [0.0],
+        monte_carlo_samples: int = 4,
+        integration_params: IntegrationParams = IntegrationParams(),
+        vmap_chunk_size: int = 196608,
+    ):
+        """
+        Calculate the entropy for the given latent representations.
+
+        Args:
+            heading_nan_pad (List[int]): Number of NaN padding values at the start of the sequence.
+            trailing_nan_pad (List[int]): Number of NaN padding values at the end of the sequence.
+            latents (List[torch.Tensor]): Latent representations.
+            noise_levels (List[float]): Noise levels / times at which to evaluate the entropy (list of floats between 0 and 1, where 0 is clean and 1 is fully noised).
+            monte_carlo_samples (Optional[int]): Number of Monte Carlo samples used when calculating unbiased entropy estimate.
+            integration_params (IntegrationParams): Integration and solver parameters for likelihood evaluation. See IntegrationParams.
+            vmap_chunk_size (int): Vectorization chunk size used when calculating entropy for multiple time-steps in parallel. Set lower if you run into out-of-memory issues.
+        Returns:
+            List[np.ndarray]: Entropy values with NaN padding applied.
+        """
+        len_latents = [lat.shape[0] for lat in latents]
+        latents = torch.nn.utils.rnn.pad_sequence(latents, batch_first=True)
+        if self.model.__class__.__name__ == "RectFlowsTransformerModel":
+            # NOTE: model was trained with a definition of rectified flow where t=1.0 is unnoised and t=0.0 is fully noised.
+            # To keep compatible with conventional definitions of noise levels, the noise levels are inverted here.
+            ode_kwargs = asdict(integration_params)
+            noise_levels = [1.0 - level for level in noise_levels]
+            ode_kwargs["t_eval"] = noise_levels
+        logp_est, samples, t_eval_forward = self.model.pred_new(
+            latents, **ode_kwargs, vmap_chunk_size=vmap_chunk_size, samples_pr_context=monte_carlo_samples
+        )
+        nlls = -torch.as_tensor(logp_est, dtype=torch.float32, device=latents.device)
+        entrs = nlls.mean(dim=2)
+        entrs = entrs.to("cpu")
+        ret = []
+        for entr, l, heading_nan_pad, trailing_nan_pad in zip(
+            entrs.transpose(0, 1), len_latents, heading_nan_pads, trailing_nan_pads
+        ):
+            ret.append(
+                np.pad(
+                    entr[:, :l],
+                    ((0, 0), (heading_nan_pad, trailing_nan_pad)),
+                    mode="constant",
+                    constant_values=np.nan,
+                )
+            )
+        return ret
     def encode_m2l(self, audio_file: str | np.ndarray, silence_extractor):
         """
         Encodes an audio file or array into latent representations, while handling silence and padding.
