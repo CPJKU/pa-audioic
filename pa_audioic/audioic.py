@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 import librosa
 from music2latent import EncoderDecoder
 import numpy as np
@@ -10,7 +10,7 @@ import torch
 import torchaudio
 from jsonargparse import CLI
 import csv
-
+import minimp3py
 from .diffusion_models import RectFlowsTransformerModel
 from dataclasses import dataclass, field, asdict
 
@@ -298,7 +298,8 @@ class ICCalcHelper:
                 - latents_padded: Padded latent representations.
         """
         if isinstance(audio_file, str):
-            audio, rate = sf.read(audio_file, dtype="float32")
+            # audio, rate = sf.read(audio_file, dtype="float32")
+            audio, rate = minimp3py.read(audio_file)
             if rate != 44100:
                 audio_tensor = torch.from_numpy(audio)
                 resampler = torchaudio.transforms.Resample(
@@ -340,7 +341,7 @@ class ICCalcHelper:
         """
         return (np.arange(n_frames) + 1) * PERIODE_MUSIC_2_LATENT
 
-def calc_ic(
+def calc(
     audio_files: List[str],
     noise_levels: List[float] = [0.0],
     audio_type: str = "music",
@@ -350,22 +351,28 @@ def calc_ic(
     noise_from_expection: bool = True,
     integration_params: IntegrationParams = IntegrationParams(),
     bz: int = 1,
-    vmap_chunk_size: int = 196608
+    vmap_chunk_size: int = 196608,
+    metric: Literal["ic", "entropy"] = "ic",
 ):
-    """Calculate the Information Content (IC) for each audio file and store the results in CSV files.
+    """Calculate IC or entropy for each audio file and store the results in CSV files.
 
     Args:
         audio_files (List[str]): A list of audio file paths to process.
-        noise_levels (List[float], optional): Noise levels / times at which to evaluate the IC (list of floats between 0 and 1, where 0 is clean and 1 is fully noised).
+        noise_levels (List[float], optional): Noise levels / times at which to evaluate the metric (list of floats between 0 and 1, where 0 is clean and 1 is fully noised).
         audio_type (str, optional): The type of audio being processed ('music' or 'voice'). Used for replacing heading and trailing silence with NaN values.
         output_dir (str, optional): The directory where output files will be saved.
         device (str, optional): The device to use for computation ('cuda' or 'cpu').
-        monte_carlo_samples (Optional[int]): Number of Monte Carlo samples used when calculating IC with noised data. If None, uses expected value of noise process. Otherwise, performs Monte Carlo estimate of noise process
-        noise_from_expection (bool): Whether to compute IC from the expected noise process or use the probability flow ODE.
+        monte_carlo_samples (Optional[int]): Number of Monte Carlo samples used when calculating IC with noised data. If None, uses expected value of noise process. Otherwise, performs Monte Carlo estimate of noise process. For entropy, this controls the number of samples used for the estimate.
+        noise_from_expection (bool): Whether to compute IC from the expected noise process or use the probability flow ODE. Ignored for entropy.
         integration_params (IntegrationParams, optional): Integration and solver parameters for likelihood evaluation.
         bz (int, optional): Batch size for processing audio files. Setting this >1 can speed up computation if audio files are short and approximately uniform in length. 
         vmap_chunk_size (int): Vectorization chunk size used when calculating IC for multiple time-steps in parallel. Set lower if you run into out-of-memory issues.
+        metric (Literal["ic", "entropy"]): Metric to compute.
     """
+    metric = metric.lower()
+    if metric not in {"ic", "entropy"}:
+        raise ValueError("metric must be either 'ic' or 'entropy'")
+
     ic_calc_helper = ICCalcHelper(device=device)
     data_loader = torch.utils.data.DataLoader(
         audio_files, batch_size=bz, shuffle=False, drop_last=False
@@ -377,27 +384,42 @@ def calc_ic(
                 for audio_file in audio_files
             ]
         )
-        nll = ic_calc_helper.ic(
-            heading_nan_pad,
-            trailing_nan_padding,
-            latents,
-            noise_levels=noise_levels,
-            integration_params=integration_params,
-            noise_from_expection=noise_from_expection,
-            monte_carlo_samples=monte_carlo_samples,
-            vmap_chunk_size=vmap_chunk_size,
-        )
+
+        if metric == "ic":
+            values = ic_calc_helper.ic(
+                heading_nan_pad,
+                trailing_nan_padding,
+                latents,
+                noise_levels=noise_levels,
+                integration_params=integration_params,
+                noise_from_expection=noise_from_expection,
+                monte_carlo_samples=monte_carlo_samples,
+                vmap_chunk_size=vmap_chunk_size,
+            )
+            metric_prefix = "IC"
+        else:
+            assert monte_carlo_samples is not None, "monte_carlo_samples must be specified for entropy calculation."
+            values = ic_calc_helper.entr(
+                heading_nan_pad,
+                trailing_nan_padding,
+                latents,
+                noise_levels=noise_levels,
+                integration_params=integration_params,
+                monte_carlo_samples=monte_carlo_samples,
+                vmap_chunk_size=vmap_chunk_size,
+            )
+            metric_prefix = "Entropy"
 
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        for audio_file, nll in zip(audio_files, nll):
-            time = ic_calc_helper.frames_to_time(nll.shape[1])
+        for audio_file, metric_values in zip(audio_files, values):
+            time = ic_calc_helper.frames_to_time(metric_values.shape[1])
             csv_filename = output_dir.joinpath(f"{Path(audio_file).stem}.csv")
             with open(csv_filename, mode="w", newline="") as file:
                 writer = csv.writer(file)
-                writer.writerow(["Time", *[f"IC_{level}" for level in noise_levels]])
-                writer.writerows(zip(time, *nll))
+                writer.writerow(["Time", *[f"{metric_prefix}_{level}" for level in noise_levels]])
+                writer.writerows(zip(time, *metric_values))
 
 
 if __name__ == "__main__":
-    CLI(calc_ic, as_positional=True)
+    CLI(calc, as_positional=True)

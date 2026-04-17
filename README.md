@@ -1,7 +1,7 @@
 # PAAudioIC
 PAAudioIC provides tools for calculating the *information content* (IC) as a proxy for human-perceived surprise when listening to music.  This repo is the official implementation of [*"Perceptually Aligning Representations of Music via Noise-Augmented Autoencoders"*, Bjare et al., ICASSP 2026, submitted](https://openreview.net/forum?id=rXUKO0ysUy).
 
-PAAudioIC includes a command-line tool and Python classes for calculating IC using a rectified flow (diffusion) model.
+PAAudioIC includes a command-line tool and Python classes for calculating IC and entropy using a rectified flow (diffusion) model.
 
 
 ## Installation
@@ -21,16 +21,18 @@ pip install ".[demo]"
 
 ## Usage
 ### Using PAAudioIC programmatically
-The [`demo.ipynb`](./demo.ipynb) notebook demonstrates how to use the library programmatically to calculate and visualize the IC of audio files.
+The [`demo.ipynb`](./demo.ipynb) notebook demonstrates how to use the library programmatically to calculate and visualize IC and entropy of audio files.
 
 ### Running the `audioic` Command-Line Tool
 #### Basic usage
-The [`audioic`](./pa_audioic/audioic.py) command-line tool allows you to compute the *information content* (IC) of audio files.
+The [`audioic`](./pa_audioic/audioic.py) command-line tool allows you to compute *information content* (IC) or entropy of audio files.
 To use it, specify the audio files you want to process and provide an output directory where the results will be saved as CSV files:
 
 ```bash
 python -m pa_audioic.audioic --output_dir OUTPUT_DIR --device "cpu" "['AUDIO_FILE_1','AUDIO_FILE_2',...]"
 ```
+
+Use `--metric entropy` to compute entropy instead of IC.
 
 Replace `AUDIO_FILE_1`, `AUDIO_FILE_2`, etc., with the paths to your audio files, and `OUTPUT_DIR` with the directory where you want the output files to be stored.
 
@@ -52,7 +54,7 @@ Running `audioic` with parameters
 ```bash
 python -m pa_audioic.audioic --noise_levels "[0.0,0.3,0.5]"  "['AUDIO_FILE_1']"
 ```
-will result in a an audio file following the following format.
+will result in an audio file in the following format (shown for `--metric ic`).
 ```csv
 Time,IC_0.0,IC_0.3,IC_0.5
 0.09287981859410431,nan,nan,nan
@@ -69,6 +71,8 @@ Time,IC_0.0,IC_0.3,IC_0.5
 ```
 **Time** — Reports the time in seconds (reported as the timestamp of the last sample decoded from the predicted music2latent frame).
 **IC_NOISE_LEVEL** — IC reported at NOISE_LEVEL. `nan` is reported where the model detects heading or trailing silence in the audio file.
+
+If you run with `--metric entropy`, columns are named `Entropy_NOISE_LEVEL` instead.
 
 #### Advanced usage
 To list the full program arguments, run:
