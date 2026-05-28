@@ -1,7 +1,7 @@
 # PAAudioIC
 PAAudioIC provides tools for calculating the *information content* (IC) as a proxy for human-perceived surprise when listening to music.
 
-PAAudioIC includes a command-line tool and Python classes for calculating IC using a rectified flow (diffusion) model.
+PAAudioIC includes a command-line tool and Python classes for calculating IC using a rectified flow (diffusion) model. This repo is the official implementation of *"Perceptually Aligning Representations of Music via Noise-Augmented Autoencoders"*, Bjare et al., presented at  [NeurIPS - AI for Music Workshop, 2025](https://openreview.net/forum?id=rXUKO0ysUy) and EUSIPCO 2026. 
 
 
 ## Installation
